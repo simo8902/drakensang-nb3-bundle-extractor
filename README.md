@@ -1,5 +1,9 @@
 # NB3 Bundle Extractor for DSO
 
+![GitHub repo size](https://img.shields.io/github/repo-size/simo8902/drakensang-nb3-bundle-extractor)
+![GitHub last commit](https://img.shields.io/github/last-commit/simo8902/drakensang-nb3-bundle-extractor)
+![GitHub license](https://img.shields.io/github/license/simo8902/drakensang-nb3-bundle-extractor)
+
 Supports Nebula2/3 structure
 
 ### Extracts:
@@ -36,17 +40,18 @@ Respect the game
 Document the past
 
 ## Usage  
+simple asf
 
-# extract.py
+# neb.py
 ```bash
 py neb.py
 ```
+auto-scans input/ folder recursively for *.nb._* files
 
 # bank.py
 ```
-py bank_extract.py <file1.bank> [file2.bank ...]
+py bank.py <file1.bank> [file2.bank ...]
 ```
-auto-scans input/ folder recursively for *.nb._* files
 
 # toc.py
 ```

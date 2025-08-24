@@ -1,0 +1,49 @@
+MAPPING STRUCTURE (DATA FROM 2020):
+📌 TIME OF STAMP: 08/24/2025
+
+46-50_lortac
+pw0001_hub_music_a0006_grimford_hub pw city
+C2100_hub Elonidos
+h0001_hub Elonidos
+
+C2201 Atlantis 3 layers
+f4100_hub Andrakasch
+h0001_hub_music_c2100_hub hiraja
+g0001-g0014 LORTAC
+
+c2102? 3 layers
+g0007_temple_fire_01_dun LORTAC STRUCTURE G0001-G0012
+
+
+UNKNOWN: e_timetravel_01_dun
+
+Firmstone in der Vergangenheit
+EVENT LIST:
+2012 halloween event
+xmas_2012 3 layers
+
+DELETED CONTENT:
+Gamblers
+d3101_dun OCEAN OF BONES
+d3102_dun HALLS OF THE DEAD
+
+review optional:
+e_z0120_dun Blazing Inferno  
+
+d3001_hub TO d3006_hub ATRIUM'S 
+
+REVIEW {old data} (DELETED CONTENT):
+Royal Guardians' Court a0210_hub 
+WATERY GRAVE d3100_hub 
+Kingshill of the Anderworld e_a0200_dun_hal_2012   
+The Flying Island a0010_dun 
+Pilgrim's path a0100_pilgrimpath 
+Darbmoor a0102_peatmoor 
+Tegan's Ceremonial Hall contains two copies a0604_heraldsslair and a0604_heraldslair 
+Forgotten spas of Collisium a0204_md 
+Sargon's Shadow Kingdom e_a0306_dun_sar_04
+Werian Sanctuary Under Attack e_a0401_dun_tow_01
+Shanri-La URGENT e_d3101_dun_ess_01
+Frosty Wasteland e_z0121_dun_nightmare_ice
+Kingshill under Invasion e_a0200_dun_tow_02
+a0103_pilgrimscrypt_heroic HEROIC (OLD GRIMMAGSTONE)

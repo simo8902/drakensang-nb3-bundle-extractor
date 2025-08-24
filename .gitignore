@@ -1,0 +1,8 @@
+.venv/
+export_win32/
+input/
+global/
+input/
+output/
+privateOutput/
+carve.py

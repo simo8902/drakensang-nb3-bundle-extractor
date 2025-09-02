@@ -17,6 +17,8 @@ g0007_temple_fire_01_dun LORTAC STRUCTURE G0001-G0012
 
 UNKNOWN: e_timetravel_01_dun
 
+Tegan's Ceremonial Hall contains two copies a0604_heraldsslair and a0604_heraldslair 
+
 Firmstone in der Vergangenheit
 EVENT LIST:
 2012 halloween event
@@ -24,6 +26,7 @@ xmas_2012 3 layers
 
 DELETED CONTENT:
 Gamblers
+
 d3101_dun OCEAN OF BONES
 d3102_dun HALLS OF THE DEAD
 
@@ -39,8 +42,7 @@ Kingshill of the Anderworld e_a0200_dun_hal_2012
 The Flying Island a0010_dun 
 Pilgrim's path a0100_pilgrimpath 
 Darbmoor a0102_peatmoor 
-Tegan's Ceremonial Hall contains two copies a0604_heraldsslair and a0604_heraldslair 
-Forgotten spas of Collisium a0204_md 
+Forgotten spas of Collisium a0204_md    {current lingering memory}
 Sargon's Shadow Kingdom e_a0306_dun_sar_04
 Werian Sanctuary Under Attack e_a0401_dun_tow_01
 Shanri-La URGENT e_d3101_dun_ess_01

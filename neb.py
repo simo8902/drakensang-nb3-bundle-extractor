@@ -110,7 +110,7 @@ def extract_bundle(path: str):
         with open(path, "rb") as f:
             magic = f.read(8)
             # dbg(f"[bundle] magic={magic!r}")
-            if magic not in (b"_B3NHB3N", b"_NZ2", b"_2ZN"):
+            if magic not in (b"_B3NHB3N"):
                 warn(f"[bundle] invalid magic {magic!r} {path}")
                 return False
             files_b = f.read(4)
@@ -242,6 +242,92 @@ def extract_ib3n(path: str, rel: str):
         err(f"[ib3n] {path} error: {e}")
         traceback.print_exc()
         return False
+        
+def extract_bxml(path: str, rel: str):
+    import os, struct
+
+    def u32(b, o): return struct.unpack_from('<I', b, o)[0]
+    def u16(b, o): return struct.unpack_from('<H', b, o)[0]
+
+    def parse_lmxb_bounds(data, pos, max_end=None):
+        if data[pos:pos+4] != b'LMXB': return None
+        off = pos + 4
+        if off + 12 > len(data): return None
+        na = u32(data, off); off += 4
+        nn = u32(data, off); off += 4
+        ns = u32(data, off); off += 4
+        off += nn * 24 + na * 8
+        p = off
+        for _ in range(ns):
+            q = data.find(b'\x00', p, max_end if max_end else len(data))
+            if q < 0: return None
+            p = q + 1
+        if max_end and p > max_end: return None
+        return pos, p
+
+    def sanitize(name):
+        return ''.join(c if c.isalnum() or c in ('-','_','.', '/','\\') else '_' for c in name) or 'unnamed'
+
+    try:
+        dbg(f"[bxml] scanning {path}")
+        with open(path, 'rb') as f:
+            data = f.read()
+
+        # accept both KCAP and PBXML
+        if data[:4] not in (b'KCAP', b'PBXM'):
+            dbg(f"[bxml] skipped (no KCAP/PBXM) {path}")
+            return False
+
+        nl = u16(data, 8)
+        name = data[10:10+nl].decode('utf-8', 'ignore').strip()
+        subdir = os.path.join(OUTPUT_ROOT, sanitize(name))
+        os.makedirs(subdir, exist_ok=True)
+
+        pos = 10 + nl + 4
+        count = 0
+        end_limit = len(data)
+
+        dbg(f"[bxml] begin scan KCAP={name} size={end_limit}")
+
+        while True:
+            p = data.find(b'LMXB', pos, end_limit)
+            if p == -1:
+                break
+            a = max(0, p - 4)
+            nxt = data.find(b'LMXB', p + 4, end_limit)
+            if nxt == -1:
+                nxt = end_limit
+            q = nxt
+            while q > p and data[q-1] == 0:
+                q -= 1
+            b = q
+            chunk = data[p:b]
+            tail = data[max(0, a - 512):a]
+            parts = tail.split(b'\x00')
+            name_bytes = b''
+            for s in reversed(parts):
+                if b'/' in s and len(s) > 4:
+                    name_bytes = s
+                    break
+            name2 = name_bytes.decode('utf-8', 'ignore').strip() if name_bytes else f'lmxb_{count:02d}'
+            outp = os.path.join(subdir, f'{sanitize(name2)}.bxml')
+            os.makedirs(os.path.dirname(outp), exist_ok=True)
+            with open(outp, 'wb') as o:
+                o.write(chunk)
+            dbg(f"[bxml] wrote {outp} ({len(chunk)} bytes)")
+            count += 1
+            pos = nxt
+
+        if count == 0:
+            warn(f"[bxml] no LMXB found in {os.path.basename(path)}")
+            return False
+        ok(f"[bxml] extracted {count} LMXB chunks from {os.path.basename(path)}")
+        return True
+    except Exception as e:
+        err(f"[bxml] {path} error: {e}")
+        traceback.print_exc()
+        return False
+
 
 
 def iter_input_files(root: str):
@@ -259,6 +345,13 @@ def handle_file(path: str, rel: str):
         if extract_ib3n(path, rel):
             return True
         if extract_bundle(path):
+            for root, _, files in os.walk(OUTPUT_ROOT):
+                for fn in files:
+                    fp = os.path.join(root, fn)
+                    with open(fp, 'rb') as f:
+                        sig = f.read(4)
+                        if sig in (b'KCAP', b'PBXM'):
+                            extract_bxml(fp, fn)
             return True
         warn(f"unparsed -> {rel}")
         try:

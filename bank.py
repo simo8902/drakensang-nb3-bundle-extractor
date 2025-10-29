@@ -13,7 +13,7 @@ if len(sys.argv) > 1:
 else:
     banks = glob.glob("*.bank")
     if not banks:
-        print("usage: python extract.py <file1.bank> [file2.bank ...]")
+        print("usage: py extract.py <file1.bank> [file2.bank ...]")
         sys.exit(1)
 
 for bank in banks:

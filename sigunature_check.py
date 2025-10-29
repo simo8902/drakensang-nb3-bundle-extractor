@@ -18,7 +18,7 @@ def parse_bank(path):
         if riff != b"RIFF":
             print("Not RIFF/FMOD bank:", path)
             return
-        f.read(4)  # total size
+        f.read(4)
         fcc = f.read(4)
         if fcc.strip() not in [b"FEV", b"FSB", b"FMOD"]:
             print("Not FMOD bank:", fcc)
@@ -41,7 +41,7 @@ def parse_bank(path):
                 data = f.read(size)
                 print("IBSS size:", len(data))
 
-            elif fourcc == b"PRJB":  # sometimes "PROJBANK" section
+            elif fourcc == b"PRJB":
                 print("Project/Bank metadata")
 
             elif fourcc == b"STRG":
@@ -56,7 +56,6 @@ def parse_bank(path):
             else:
                 f.seek(size, 1)
 
-            # align to 2 bytes
             if size % 2 == 1:
                 f.seek(1, 1)
 

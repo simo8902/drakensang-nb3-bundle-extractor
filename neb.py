@@ -1,7 +1,7 @@
 # PROD. BY SIMO
 # UPDATED 09/02/2025
 
-import os, sys, struct, zlib, glob, traceback, time
+import os, sys, struct, zlib, glob, traceback, time, hashlib
 
 INPUT_ROOT = os.path.join(os.path.dirname(__file__), "input")
 OUTPUT_ROOT = os.path.join(os.path.dirname(__file__), "output")
@@ -94,7 +94,7 @@ def extract_single(path: str):
                 err(f"[single] decompress fail: {e}")
                 traceback.print_exc()
                 return False
-            base = os.path.splitext(os.path.basename(path))[0]
+            base = os.path.basename(path)
             out_rel = base
             p = _write_out(out_rel, raw)
            # ok(f"[single] {path} -> {p}")
@@ -214,57 +214,35 @@ def extract_bundle(path: str):
         traceback.print_exc()
         return False
 
-def extract_ib3n(path: str):
-   # info(f"[ib3n] open {path}")
+def extract_ib3n(path: str, rel: str):
     try:
         with open(path, "rb") as f:
             m = f.read(4)
             if m != b"IB3N":
-                #dbg(f"[ib3n] magic={m!r}")
                 return False
-            cnt_b = f.read(2)
-            if len(cnt_b) != 2:
-                err("[ib3n] count truncated")
-                return False
-            cnt = struct.unpack("<H", cnt_b)[0]
+            cnt = struct.unpack("<H", f.read(2))[0]
             entries = []
             for i in range(cnt):
-                nlen_b = f.read(2)
-                if len(nlen_b) != 2:
-                    err(f"[ib3n] name len truncated at {i}")
-                    break
-                nlen = struct.unpack("<H", nlen_b)[0]
-                name_b = f.read(nlen)
-                if len(name_b) != nlen:
-                    err(f"[ib3n] name truncated at {i}")
-                    break
-                name = name_b.decode("utf-8", errors="replace")
-                size_b = f.read(4)
-                if len(size_b) != 4:
-                    err(f"[ib3n] size truncated at {i}")
-                    break
-                size = struct.unpack("<I", size_b)[0]
-                hlen_b = f.read(2)
-                if len(hlen_b) != 2:
-                    err(f"[ib3n] hash len truncated at {i}")
-                    break
-                hlen = struct.unpack("<H", hlen_b)[0]
-                hb = f.read(hlen)
-                if len(hb) != hlen:
-                    err(f"[ib3n] hash truncated at {i}")
-                    break
-                h = hb.decode("ascii", errors="ignore")
+                nlen = struct.unpack("<H", f.read(2))[0]
+                name = f.read(nlen).decode("utf-8", errors="replace")
+                size = struct.unpack("<I", f.read(4))[0]
+                hlen = struct.unpack("<H", f.read(2))[0]
+                h = f.read(hlen).decode("ascii", errors="ignore")
                 entries.append((name, size, h))
-        base = os.path.basename(path)
-        out_rel = base + ".toc.txt"
+
+        rel_clean = _sanitize_rel(rel)
+        hname = hashlib.sha1(rel_clean.encode()).hexdigest()[:8]
+        base = os.path.splitext(rel_clean)[0].replace("/", "_")
+        out_rel = f"_toc/{base}_{hname}.toc.txt"
+
         data = "\n".join(f"{i}\t{e[0]}\t{e[1]}\t{e[2]}" for i, e in enumerate(entries))
         _write_out(out_rel, data.encode("utf-8"))
-        #ok(f"[ib3n] {path} ({len(entries)} entries)")
         return True
     except Exception as e:
         err(f"[ib3n] {path} error: {e}")
         traceback.print_exc()
         return False
+
 
 def iter_input_files(root: str):
     for dp, _, fns in os.walk(root):
@@ -278,7 +256,7 @@ def handle_file(path: str, rel: str):
     try:
         if extract_single(path):
             return True
-        if extract_ib3n(path):
+        if extract_ib3n(path, rel):
             return True
         if extract_bundle(path):
             return True
@@ -317,14 +295,14 @@ def main():
         if not paths:
             warn(f"no input files in {INPUT_ROOT}")
         for path, rel in paths:
-           # info(f"{C_GRN}>>> Extracting{C_RESET} {path}")
+            #info(f"{C_GRN}>>> Extracting{C_RESET} {path}")
             handle_file(path, rel)
-           # info(f"{C_GRN}>>> Done{C_RESET} {path}")
+            #info(f"{C_GRN}>>> Done{C_RESET} {path}")
         return
     for p in args:
-       # info(f"{C_GRN}>>> Extracting{C_RESET} {p}")
+        #info(f"{C_GRN}>>> Extracting{C_RESET} {p}")
         process_path(p)
-       # info(f"{C_GRN}>>> Done{C_RESET} {p}")
+        #info(f"{C_GRN}>>> Done{C_RESET} {p}")
 
 if __name__ == "__main__":
     main()

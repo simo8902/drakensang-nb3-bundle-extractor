@@ -53,21 +53,24 @@ python sigunature_check.py <file1.bank> [file2.bank ...]
 ```
 py {inputFROM} {inputWith} out.txt
 ```
-first get main toc file e.g. from current version\
-## __toc._md5hash\
-and\
-## bundles_optional___toc._md5hash\
-and second get the same from test server
-then parse with neb.py\
-copy diff.py to output dir where these toc files are located\
-compare with diff.py\
-then copy the new data, extract it w neb.py\
-and set the path in copy.ps e.g.\
-$listFile and $src
+
+1. Get main TOC file from current version  
+   **__toc_md5hash**  
+   **bundles_optional___toc_md5hash**
+
+2. Get the same files from test server  
+3. Parse them with **neb.py**  
+4. Copy **diff.py** to the output directory where these TOC files are located  
+5. Compare with **diff.py**  
+6. Copy the new data and extract it with **neb.py**  
+7. Set the path in **copy.ps1**  
+   **$listFile** is the input file for compare  
+   **$src** is the path with new data containing bundles  
 
 # copy.ps1
-change $src to the path u have new data containing bundles obv\
-$listFile with the input file for compare 
+Change **$src** to the path containing the new data (bundles)  
+**$listFile** must point to the input file for comparison  
+
 
 then copy the difference
 

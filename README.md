@@ -4,31 +4,39 @@
 ![GitHub last commit](https://img.shields.io/github/last-commit/simo8902/drakensang-nb3-bundle-extractor)
 ![GitHub license](https://img.shields.io/github/license/simo8902/drakensang-nb3-bundle-extractor)
 
+### version_history
+
+- added explicit support for not bundled files \
+- split extraction into two steps: first extract everything, then sort files into correct folders \
+- added TOC-based sorting that reads TOC files to know where each file belongs \
+- files without a TOC entry just get their hash removed from the filename \
+- fixed file moving on Windows when the output file already exists \
+
+WARNING: for cur version of the game data, please delete the cached data fully(DSOClient from Temp), \
+then redownload then use the script to parse it
+
 ### Extracts:
 
-- Meshes -> .nvx2
-- Models -> .n3
-- Animations -> .nax3 / .nac
-- Audio -> `.bank` → `WAVE` (1536kbps, pure 🔥)
-- Shaders -> PDHS (SM3.0 bytecode)
-- Sequences -> .pbxml (LMXB binary XML + .bxml tables)
-- Data -> .bin
-- Maps -> .col / .db4 / .map 
-    - CPAM -> collision packages
-    - IPAM -> instance packages
-    - MOSD -> model/scene object data
-
-WARNING: 
-Some of this data has been fully removed from production servers.
-This archive preserves what the game has forgotten
+- The following tags: **_B3NHB3N**, **__ZN**, **IB3N**, **_TOC** \
+- TODO: The following are not yet tested: **KCAP**,**LMXB** \
+(name_len(u16 @0x08) + name(UTF-8) + padding/u32 + repeated) \
+- The **shaders_sm30**, is a nighmare hell for reversing, however I get somewhere \
+- Using **SM3.0 bytecode** obv \
+- The fourcc in the file are: FXLC, CTAB, HLSL, CLIT, PRES, PRSI, \ 
+PUVS, MLPU, **PDHS** is the header fourcc, MLPS, SSMT, PSSM, ESMD \
+(however some of them may or may not be valid) \
+- File size: 0x0016B506 bytes 
+```bash
+python shaders.py --dedup shaders_sm30 folderName
+```
+P.S. Im not continuing this shader reversing shit sry. \
+U see the shader names used, thats enough. U can write them yourself \
 
 ⚠️ Disclaimer
 The script will need a lot of time!
 This is not datamining for exploits or gameplay hacks
-It’s pure asset-level archival of forgotten map content for preservation and curiosity
 Use it responsibly
 Respect the game
-Document the past
 
 ## Usage  
 simple asf
@@ -37,16 +45,11 @@ simple asf
 ```bash
 py neb.py
 ```
-auto-scans input/ folder recursively for *.nb._* files
+auto-scans input/ folder recursively for data files
 
 # bank.py
 ```
 py bank.py <file1.bank> [file2.bank ...]
-```
-
-# sigunature_check.py
-```
-python sigunature_check.py <file1.bank> [file2.bank ...]
 ```
 
 # diff.py

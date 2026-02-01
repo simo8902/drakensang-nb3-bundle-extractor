@@ -1,7 +1,7 @@
-# PROD. BY SIMO
-# UPDATED 09/02/2025
+# PROD. BY SIMEON
+# UPDATED 02/01/2026
 
-import os, sys, struct, zlib, glob, traceback, time, hashlib
+import os, sys, struct, zlib, glob, traceback, time, hashlib, re
 
 INPUT_ROOT = os.path.join(os.path.dirname(__file__), "input")
 OUTPUT_ROOT = os.path.join(os.path.dirname(__file__), "output")
@@ -273,7 +273,6 @@ def extract_bxml(path: str, rel: str):
         with open(path, 'rb') as f:
             data = f.read()
 
-        # accept both KCAP and PBXML
         if data[:4] not in (b'KCAP', b'PBXM'):
             dbg(f"[bxml] skipped (no KCAP/PBXM) {path}")
             return False
@@ -345,22 +344,22 @@ def handle_file(path: str, rel: str):
         if extract_ib3n(path, rel):
             return True
         if extract_bundle(path):
-            for root, _, files in os.walk(OUTPUT_ROOT):
-                for fn in files:
-                    fp = os.path.join(root, fn)
-                    with open(fp, 'rb') as f:
-                        sig = f.read(4)
-                        if sig in (b'KCAP', b'PBXM'):
-                            extract_bxml(fp, fn)
+            # for root, _, files in os.walk(OUTPUT_ROOT):
+                #for fn in files:
+                    # fp = os.path.join(root, fn)
+                    # with open(fp, 'rb') as f:
+                       # sig = f.read(4)
+                       # if sig in (b'KCAP', b'PBXM'):
+                        #    extract_bxml(fp, fn)
             return True
         warn(f"unparsed -> {rel}")
         try:
             with open(path, "rb") as f:
                 data = f.read()
-            _write_out(os.path.join("_unparsed", rel), data)
-            ok(f"raw copy -> _unparsed/{rel} ({len(data)} bytes)")
+            _write_out(rel, data)
+            ok(f"raw -> {rel} ({len(data)} bytes)")
         except Exception as e:
-            err(f"unparsed copy fail {path}: {e}")
+            err(f"copy fail {path}: {e}")
         return False
     except Exception as e:
         err(f"handle_file fail {path}: {e}")
@@ -379,7 +378,45 @@ def process_path(p: str):
     rel = os.path.relpath(p, INPUT_ROOT) if os.path.commonpath([INPUT_ROOT, os.path.abspath(p)]) == INPUT_ROOT else os.path.basename(p)
     handle_file(p, rel)
 
-
+def relocate_by_toc():
+    hash_to_path = {}
+    toc_files = set()
+    for root, _, files in os.walk(OUTPUT_ROOT):
+        for fn in files:
+            if '__toc' not in fn: continue
+            fp = os.path.normpath(os.path.join(root, fn))
+            toc_files.add(fp)
+            try:
+                with open(fp, 'r', encoding='utf-8') as f:
+                    for line in f:
+                        line = line.strip()
+                        if not line: continue
+                        parts = line.split('|')
+                        if len(parts) == 3 and parts[1] == 'f':
+                            hash_to_path[parts[2]] = parts[0]
+            except Exception as e:
+                err(f"[toc] parse {fp}: {e}")
+    info(f"[toc] {len(hash_to_path)} entries | {len(toc_files)} toc files")
+    moved = skipped = 0
+    for root, _, files in os.walk(OUTPUT_ROOT):
+        for fn in list(files):
+            fp = os.path.normpath(os.path.join(root, fn))
+            if fp in toc_files: continue
+            m = re.search(r'\._([0-9a-fA-F]{32})$', fn)
+            if not m: continue
+            h = m.group(1)
+            if h in hash_to_path:
+                target = os.path.join(OUTPUT_ROOT, hash_to_path[h])
+                os.makedirs(os.path.dirname(target), exist_ok=True)
+                os.replace(fp, target)
+                moved += 1
+            else:
+                new_fn = re.sub(r'\._[0-9a-fA-F]{32}$', '', fn)
+                os.rename(fp, os.path.join(root, new_fn))
+                skipped += 1
+                warn(f"[toc] no match h={h} fn={fn}")
+    ok(f"[toc] moved={moved} stripped={skipped}")
+    
 def main():
     os.makedirs(OUTPUT_ROOT, exist_ok=True)
     args = sys.argv[1:]
@@ -391,11 +428,13 @@ def main():
             #info(f"{C_GRN}>>> Extracting{C_RESET} {path}")
             handle_file(path, rel)
             #info(f"{C_GRN}>>> Done{C_RESET} {path}")
+        relocate_by_toc()
         return
     for p in args:
         #info(f"{C_GRN}>>> Extracting{C_RESET} {p}")
         process_path(p)
         #info(f"{C_GRN}>>> Done{C_RESET} {p}")
-
+    relocate_by_toc()
+    
 if __name__ == "__main__":
     main()

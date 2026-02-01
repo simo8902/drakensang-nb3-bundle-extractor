@@ -6,26 +6,26 @@
 
 ### version_history
 
-- added explicit support for not bundled files \
-- split extraction into two steps: first extract everything, then sort files into correct folders \
-- added TOC-based sorting that reads TOC files to know where each file belongs \
-- files without a TOC entry just get their hash removed from the filename \
-- fixed file moving on Windows when the output file already exists \
+added explicit support for not bundled files \
+split extraction into two steps: first extract everything, then sort files into correct folders \
+added TOC-based sorting that reads TOC files to know where each file belongs \
+files without a TOC entry just get their hash removed from the filename \
+fixed file moving on Windows when the output file already exists \
 
 WARNING: for cur version of the game data, please delete the cached data fully(DSOClient from Temp), \
 then redownload then use the script to parse it
 
 ### Extracts:
 
-- The following tags: **_B3NHB3N**, **__ZN**, **IB3N**, **_TOC** \
-- TODO: The following are not yet tested: **KCAP**,**LMXB** \
+The following tags: **_B3NHB3N**, **__ZN**, **IB3N**, **_TOC** \
+TODO: The following are not yet tested: **KCAP**,**LMXB** \
 (name_len(u16 @0x08) + name(UTF-8) + padding/u32 + repeated) \
-- The **shaders_sm30**, is a nighmare hell for reversing, however I get somewhere \
-- Using **SM3.0 bytecode** obv \
-- The fourcc in the file are: FXLC, CTAB, HLSL, CLIT, PRES, PRSI, \ 
+The **shaders_sm30**, is a nighmare hell for reversing, however I get somewhere \
+Using **SM3.0 bytecode** obv \
+The fourcc in the file are: FXLC, CTAB, HLSL, CLIT, PRES, PRSI, \ 
 PUVS, MLPU, **PDHS** is the header fourcc, MLPS, SSMT, PSSM, ESMD \
 (however some of them may or may not be valid) \
-- File size: 0x0016B506 bytes 
+File size: 0x0016B506 bytes 
 ```bash
 python shaders.py --dedup shaders_sm30 folderName
 ```

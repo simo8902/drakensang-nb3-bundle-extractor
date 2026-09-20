@@ -6,6 +6,8 @@
 
 ### version_history
 
+fixed bxml parsing! \
+
 added explicit support for not bundled files \
 split extraction into two steps: first extract everything, then sort files into correct folders \
 added TOC-based sorting that reads TOC files to know where each file belongs \
@@ -77,6 +79,6 @@ Change **$src** to the path containing the new data (bundles)
 
 then copy the difference
 
-prod. by simo 🖤\
+prod by simo 🖤\
 base: August 22, 2025\
 License: WTFPL

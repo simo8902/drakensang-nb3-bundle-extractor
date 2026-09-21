@@ -18,6 +18,9 @@ DEBUG = True
 
 BUNDLE_STAGE_ROOT = "__bundle_members"
 
+AUTH = {}        # ___toc authority: logical path -> stored-blob md5 (lowercase)
+EXTRACTED = {}   # stored-blob md5 -> output-relative path (filled while extracting)
+
 def _decomp_nz2(encoded: bytes) -> bytes:
     if len(encoded) < 13 or encoded[:4] != b"_2ZN":
         raise ValueError("_2ZN header truncated or invalid")
@@ -90,6 +93,81 @@ def _decomp(comp_data: bytes, xsize: int) -> bytes:
     if len(raw) != xsize:
         raise ValueError(f"zlib decoded size mismatch: {len(raw)} != {xsize}")
     return raw
+
+def load_toc_authority():
+    """Parse every ___toc file under INPUT_ROOT into AUTH (logical path -> md5).
+
+    The ___toc files are the snapshot's own version pointers: one text line per
+    file, 'path|f|<32 hex md5 of the stored blob>'. They decide which bundle
+    version and which member version is current.
+    """
+    global AUTH
+    AUTH = {}
+    for path, rel in iter_input_files(INPUT_ROOT):
+        fn = os.path.basename(path)
+        if "___toc" not in fn.lower():
+            continue
+        try:
+            with open(path, "rb") as f:
+                blob = f.read()
+            if blob[:4] in (b"__ZN", b"ZN__"):
+                raw = _decomp(blob[8:], struct.unpack_from("<I", blob, 4)[0])
+            else:
+                raw = blob
+            for line in raw.split(b"\n"):
+                s = line.decode("latin-1", "replace").strip()
+                parts = s.split("|")
+                if len(parts) == 3 and parts[1] == "f" and len(parts[2].strip()) == 32:
+                    AUTH[_sanitize_rel(parts[0])] = parts[2].strip().lower()
+        except Exception as e:
+            warn(f"[toc] parse {fn}: {e}")
+    info(f"[toc] authority: {len(AUTH)} paths from ___toc files")
+
+
+def bundle_meta_from_name(path: str):
+    """Return (logical bundle path, stored hash) from a flattened 'name.nb._<md5>' file."""
+    fn = os.path.basename(path)
+    m = re.search(r"\._([0-9a-fA-F]{32})$", fn)
+    if not m:
+        return None, None
+    h = m.group(1).lower()
+    stem = fn[:m.start()]
+    if stem.startswith("bundles_optional_"):
+        logical = "bundles/optional/" + stem[len("bundles_optional_"):]
+    elif stem.startswith("bundles_required_"):
+        logical = "bundles/required/" + stem[len("bundles_required_"):]
+    else:
+        logical = stem
+    return logical, h
+
+
+def finalize_against_toc():
+    """Alias every TOC path whose hash was extracted; report paths still missing."""
+    if not AUTH:
+        warn("[toc] no authority loaded; final verification skipped")
+        return
+    aliased = 0
+    missing = []
+    for rel_path in sorted(AUTH.keys()):
+        if rel_path.lower().endswith(".nb"):
+            continue  # bundle containers are inputs, not output content
+        h = AUTH[rel_path]
+        if h in EXTRACTED:
+            src = os.path.normpath(os.path.join(OUTPUT_ROOT, EXTRACTED[h]))
+            target = os.path.normpath(os.path.join(OUTPUT_ROOT, _sanitize_rel(rel_path)))
+            if os.path.normcase(src) == os.path.normcase(target):
+                continue
+            if not os.path.isfile(target) and os.path.isfile(src):
+                os.makedirs(os.path.dirname(target), exist_ok=True)
+                shutil.copyfile(src, target)
+                aliased += 1
+        else:
+            missing.append(rel_path)
+    ok(f"[toc] aliases={aliased} missing={len(missing)}")
+    for p in missing[:25]:
+        warn(f"[toc] MISSING {p}")
+    if len(missing) > 25:
+        warn(f"[toc] ... {len(missing) - 25} more missing")
 
 def _write_out(rel_path: str, data: bytes):
     rel_path = _sanitize_rel(rel_path)
@@ -178,6 +256,7 @@ def extract_bundle(path: str):
                 )
 
             member_count = 0
+            stale_count = 0
             for i, name in enumerate(names):
                 record_pos = f.tell()
                 record = f.read(44)
@@ -211,6 +290,15 @@ def extract_bundle(path: str):
                 if not out_rel:
                     raise ValueError(f"empty member name at idx {i}")
 
+                # toc authority: keep only the current version of each path
+                if AUTH:
+                    expected = AUTH.get(out_rel)
+                    if expected is None:
+                        warn(f"[toc] member not in toc: {out_rel}")
+                    elif expected != record_hash.decode("ascii").lower():
+                        stale_count += 1
+                        continue
+
                 if blob[:4] in (b"__ZN", b"ZN__"):
                     if size < 8:
                         raise ValueError(f"compressed entry too small at idx {i}")
@@ -220,6 +308,7 @@ def extract_bundle(path: str):
                     raw = blob
 
                 out_path = _write_out(out_rel, raw)
+                EXTRACTED[record_hash.decode("ascii").lower()] = out_rel
                 member_count += 1
 
                 if raw[:4] in (b"KCAP", b"PBXM"):
@@ -227,7 +316,7 @@ def extract_bundle(path: str):
 
             ok(
                 f"[bundle] unpacked {os.path.basename(path)} "
-                f"members={member_count}"
+                f"members={member_count} stale={stale_count}"
             )
             return True
     except Exception as e:
@@ -384,6 +473,18 @@ def handle_file(path: str, rel: str):
             return True
         if extract_ib3n(path, rel):
             return True
+
+        # toc authority: skip stale bundle versions (same logical path, wrong hash)
+        if AUTH:
+            logical, h = bundle_meta_from_name(path)
+            if logical and h:
+                expected = AUTH.get(logical)
+                if expected and expected != h:
+                    warn(
+                        f"[toc] skip stale bundle {rel} "
+                        f"(have {h[:8]}, want {expected[:8]})"
+                    )
+                    return True
 
         bundle_result = extract_bundle(path)
         if bundle_result is True:
@@ -627,6 +728,7 @@ def relocate_by_toc():
 
 def main():
     os.makedirs(OUTPUT_ROOT, exist_ok=True)
+    load_toc_authority()
     args = sys.argv[1:]
     if not args or "all" in args:
         paths = list(iter_input_files(INPUT_ROOT))
@@ -637,12 +739,14 @@ def main():
             handle_file(path, rel)
             #info(f"{C_GRN}>>> Done{C_RESET} {path}")
         relocate_by_toc()
+        finalize_against_toc()
         return
     for p in args:
         #info(f"{C_GRN}>>> Extracting{C_RESET} {p}")
         process_path(p)
         #info(f"{C_GRN}>>> Done{C_RESET} {p}")
     relocate_by_toc()
+    finalize_against_toc()
     
 if __name__ == "__main__":
     main()
